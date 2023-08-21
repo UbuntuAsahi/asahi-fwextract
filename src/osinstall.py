@@ -15,6 +15,7 @@ class OSInstaller(PackageInstaller):
         self.ucache = None
         self.efi_part = None
         self.idata_targets = []
+        self.install_size = self.min_size
 
     @property
     def default_os_name(self):
@@ -37,7 +38,8 @@ class OSInstaller(PackageInstaller):
         if not package:
             return
 
-        package = os.environ.get("REPO_BASE", ".") + "/os/" + package
+        if not package.startswith("http"):
+            package = os.environ.get("REPO_BASE", ".") + "/os/" + package
 
         logging.info(f"OS package URL: {package}")
         if package.startswith("http"):
@@ -62,6 +64,7 @@ class OSInstaller(PackageInstaller):
             expand_size = 0
         else:
             expand_size = total_size - self.min_size
+            self.install_size = total_size
             assert expand_size >= 0
 
         for part in self.template["partitions"]:
@@ -102,6 +105,7 @@ class OSInstaller(PackageInstaller):
         icon = self.template.get("icon", None)
         if icon:
             self.extract_file(icon, stub_ins.icon_path)
+            self.flush_progress()
 
         for part, info in zip(self.template["partitions"], self.part_info):
             logging.info(f"Installing partition {part!r} -> {info.name}")
@@ -126,10 +130,7 @@ class OSInstaller(PackageInstaller):
                 p_plain(f"  Copying firmware into {info.name} partition...")
                 base = os.path.join(mountpoint, "vendorfw")
                 logging.info(f"Firmware -> {base}")
-                os.makedirs(base, exist_ok=True)
-                shutil.copy(self.firmware_package.tar_path, os.path.join(base, "firmware.tar"))
-                shutil.copy(self.firmware_package.cpio_path, os.path.join(base, "firmware.cpio"))
-                self.firmware_package.save_manifest(os.path.join(base, "manifest.txt"))
+                shutil.copytree(self.firmware_package.path, base)
             if part.get("copy_installer_data", False):
                 mountpoint = self.dutil.mount(info.name)
                 data_path = os.path.join(mountpoint, "asahi")
