@@ -1,8 +1,9 @@
-asahi-fwextract (0.6.5-1) unstable; urgency=medium
+asahi-fwextract (0.6.5-1) jammy; urgency=medium
 
+  [ kaazoo ]
   * Update to v0.6.5 from upstream.
 
- -- kaazoo <kaazoo@kernelpanik.net>  Mon, 25 Sep 2023 22:55:00 +0200
+ -- Tobias Heider <me@tobhe.de>  Tue, 10 Oct 2023 01:10:32 +0200
 
 asahi-fwextract (0.6.2-1) unstable; urgency=medium
 
