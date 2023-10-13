@@ -1,3 +1,9 @@
+asahi-fwextract (0.6.12-1) unstable; urgency=medium
+
+  * Update to v0.6.12 from upstream
+
+ -- Tobias Heider <me@tobhe.de>  Fri, 13 Oct 2023 12:22:27 +0200
+
 asahi-fwextract (0.6.2-1) unstable; urgency=medium
 
   * Initial release.
