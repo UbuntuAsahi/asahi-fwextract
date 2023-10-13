@@ -5,6 +5,7 @@ from asahi_firmware.wifi import WiFiFWCollection
 from asahi_firmware.bluetooth import BluetoothFWCollection
 from asahi_firmware.multitouch import MultitouchFWCollection
 from asahi_firmware.kernel import KernelFWCollection
+from asahi_firmware.isp import ISPFWCollection
 from util import *
 
 class StubInstaller(PackageInstaller):
@@ -390,6 +391,9 @@ class StubInstaller(PackageInstaller):
         logging.info("Collecting Multitouch firmware")
         col = MultitouchFWCollection("fud_firmware/")
         pkg.add_files(sorted(col.files()))
+        logging.info("Collecting ISP firmware")
+        col = ISPFWCollection("recovery/usr/sbin/")
+        pkg.add_files(sorted(col.files()))
         logging.info("Collecting Kernel firmware")
         col = KernelFWCollection(self.kernel_path)
         pkg.add_files(sorted(col.files()))
@@ -397,6 +401,7 @@ class StubInstaller(PackageInstaller):
         subprocess.run(["tar", "czf", "all_firmware.tar.gz",
                         "fud_firmware",
                         "-C", "recovery/usr/share", "firmware",
+                        "-C", "../../usr/sbin", "appleh13camerad",
                        ], check=True)
         self.copy_idata.append(("all_firmware.tar.gz", "all_firmware.tar.gz"))
         logging.info("Detaching recovery ramdisk")

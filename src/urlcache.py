@@ -20,6 +20,7 @@ class URLCache:
     SPINNER = "/-\\|"
 
     def __init__(self, url):
+        self.url_str = url
         self.url = parse.urlparse(url)
         self.con = None
         self.size = self.get_size()
@@ -29,6 +30,14 @@ class URLCache:
         self.bytes_read = 0
         self.readahead = self.MAX_READAHEAD
         self.spin = 0
+
+    def close_connection(self):
+        if self.con is not None:
+            try:
+                self.con.close()
+            except Exception:
+                pass
+            self.con = None
 
     def get_con(self):
         if self.con is not None:
@@ -53,17 +62,26 @@ class URLCache:
         return True
 
     def get_size(self):
-        con = self.get_con()
-        con.request("HEAD", self.url.path, headers={"Connection":" keep-alive"})
-        res = con.getresponse()
-        res.read()
-        return int(res.getheader("Content-length"))
+        for i in range(10):
+            con = self.get_con()
+            con.request("HEAD", self.url.path, headers={"Connection":" keep-alive"})
+            res = con.getresponse()
+            res.read()
+            loc = res.getheader("Location", None)
+            if loc is not None:
+                self.url = parse.urlparse(loc)
+                self.con = None
+                continue
+            return int(res.getheader("Content-length"))
+
+        raise Exception("Maximum number of redirects reached")
 
     def get_partial(self, off, size, bypass_cache=False):
         path = self.url.path
         if bypass_cache:
             path += f"?{random.random()}"
 
+        res = None
         try:
             con = self.get_con()
             con.request("GET", path, headers={
@@ -73,8 +91,9 @@ class URLCache:
             res = con.getresponse()
             d = res.read()
         except Exception as e:
-            logging.error(f"Request failed for {self.url!r} range {off}-{off+size-1}")
-            logging.error(f"Response headers: {res.headers.as_string()}")
+            logging.error(f"Request failed for {self.url_str} range {off}-{off+size-1}")
+            if res is not None:
+                logging.error(f"Response headers: {res.headers.as_string()}")
             raise
 
         self.spin = (self.spin + 1) % len(self.SPINNER)
@@ -112,10 +131,11 @@ class URLCache:
                     raise
                 p_warning(f"Error downloading data ({e}), retrying... ({retry + 1}/{retries})")
                 time.sleep(sleep)
-                self.con = None
+                self.close_connection()
                 sleep += 1
-                # Retry in smaller chunks
-                self.readahead = self.MIN_READAHEAD
+                # Retry in smaller chunks after a couple errors
+                if retry > 0:
+                    self.readahead = self.MIN_READAHEAD
                 size = min(size, self.readahead * self.BLOCKSIZE)
             else:
                 break
